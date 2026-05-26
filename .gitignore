@@ -1,0 +1,9 @@
+node_modules
+.turbo
+.next
+dist
+*.tsbuildinfo
+.env
+data/*
+!data/.gitkeep
+bun.lockb
