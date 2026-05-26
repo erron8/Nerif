@@ -9,8 +9,8 @@
     "build": "turbo build",
     "dev": "turbo dev",
     "typecheck": "turbo typecheck",
-    "db:push": "bun run --filter @nerif/core db:push",
-    "bot": "bun run --filter @nerif/bot dev"
+    "db:push": "cd packages/core && bun run db:push",
+    "bot": "bun run ./packages/bot/src/index.ts"
   },
   "devDependencies": {
     "@types/bun": "^1.1.14",
