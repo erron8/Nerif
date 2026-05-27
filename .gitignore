@@ -6,4 +6,5 @@ dist
 .env
 data/*
 !data/.gitkeep
+packages/bot/data/
 bun.lockb

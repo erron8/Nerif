@@ -9,6 +9,7 @@ RUN bun install --frozen-lockfile
 FROM oven/bun:1.1 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV DB_PATH=/app/data/nerif.db
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 CMD ["bun", "--cwd", "packages/bot", "run", "start"]
