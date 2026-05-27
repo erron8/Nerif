@@ -126,10 +126,11 @@ function langCodeToTimezone(code: string | undefined): string | null {
   return map[code] ?? null;
 }
 
-async function onboarding(
-  conversation: Conversation<NerifContext>,
-  ctx: NerifContext,
-) {
+function createOnboarding(db: NerifDb) {
+  return async function onboarding(
+    conversation: Conversation<NerifContext>,
+    ctx: NerifContext,
+  ) {
   const telegramId = ctx.from?.id?.toString();
   if (!telegramId) return;
 
@@ -298,8 +299,6 @@ async function onboarding(
   let savedUser: typeof users.$inferSelect;
   try {
     savedUser = await conversation.external(async () => {
-      const db = ctx.db;
-
       const [user] = await db
         .insert(users)
         .values({
@@ -373,13 +372,14 @@ async function onboarding(
   summary.push(``, `Use /menu to get started.`);
 
   await ctx.reply(summary.join("\n"));
+  };
 }
 
 export function registerOnboardingHandlers(
   bot: Bot<NerifContext>,
   deps: { config: AppConfig; db: NerifDb; logger: Logger },
 ) {
-  bot.use(createConversation(onboarding));
+  bot.use(createConversation(createOnboarding(deps.db)));
 
   bot.command("start", async (ctx) => {
     if (ctx.userRecord) {
