@@ -3,6 +3,7 @@ export type GoalType = "weight" | "body_fat";
 
 export function resolveGoal(input: {
   type: GoalType;
+  startingValue: number;
   targetValue: number;
   latestValue: number | null;
   deadline: string;
@@ -12,10 +13,11 @@ export function resolveGoal(input: {
     return input.today > input.deadline ? "missed" : "active";
   }
 
-  const hit =
-    input.type === "weight"
-      ? input.latestValue <= input.targetValue
-      : input.latestValue <= input.targetValue;
+  const isLowerBetter = input.targetValue < input.startingValue;
+
+  const hit = isLowerBetter
+    ? input.latestValue <= input.targetValue
+    : input.latestValue >= input.targetValue;
 
   if (hit) {
     return "hit";
