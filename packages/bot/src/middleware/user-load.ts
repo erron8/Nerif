@@ -7,6 +7,8 @@ import { users } from "@nerif/core";
 
 import type { NerifContext } from "../context";
 
+const PUBLIC_COMMANDS = new Set(["start", "cancel"]);
+
 export function userLoadMiddleware(
   db: NerifDb,
   logger: Logger,
@@ -27,6 +29,13 @@ export function userLoadMiddleware(
       ctx.userRecord = user;
     } catch (err) {
       logger.error({ err, telegramId }, "failed to load telegram user");
+    }
+
+    // Guard: block user-specific commands if no profile exists
+    const command = ctx.message?.text?.match(/^\/(\w+)/)?.[1];
+    if (command && !PUBLIC_COMMANDS.has(command) && !ctx.userRecord) {
+      await ctx.reply("Set up your profile first: /start");
+      return;
     }
 
     await next();
