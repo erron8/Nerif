@@ -25,6 +25,12 @@ export function createBot(input: {
 }) {
   const bot = new Bot<NerifContext>(input.config.TELEGRAM_BOT_TOKEN);
 
+  // Expose db on context
+  bot.use((ctx, next) => {
+    (ctx as NerifContext).db = input.db;
+    return next();
+  });
+
   bot.use(
     session({
       initial: (): SessionData => ({}),
@@ -33,7 +39,7 @@ export function createBot(input: {
   bot.use(conversations());
   bot.use(userLoadMiddleware(input.db, input.logger));
 
-  registerOnboardingHandlers(bot);
+  registerOnboardingHandlers(bot, input);
   registerMenuHandlers(bot);
   registerIntakeHandlers(bot);
   registerScanHandlers(bot);
