@@ -58,8 +58,10 @@ export function registerScanHandlers(
     const today = localDateString(new Date(), user.timezone);
 
     // --- Rate limit check ---
-    const softLimit = user.scanSoftLimit ?? deps.config.SCAN_SOFT_LIMIT;
-    const hardLimit = user.scanHardLimit ?? deps.config.SCAN_HARD_LIMIT;
+    // null in DB means "disabled" (user explicitly removed limit via settings);
+    // undefined means "not configured" → fall back to env defaults.
+    const softLimit = user.scanSoftLimit === null ? 0 : (user.scanSoftLimit ?? deps.config.SCAN_SOFT_LIMIT);
+    const hardLimit = user.scanHardLimit === null ? 0 : (user.scanHardLimit ?? deps.config.SCAN_HARD_LIMIT);
 
     const limit = await checkScanLimit(deps.db, {
       userId: user.id,
@@ -158,7 +160,7 @@ export function registerScanHandlers(
           : null;
 
       await deps.db.insert(analysisLogs).values({
-        modelName: "gemini-2.5-flash",
+        modelName: deps.config.USER_LLM_MODEL ?? "gemini-2.5-flash",
         promptVersion: deps.config.PROMPT_VERSION,
         rawAiOutput: rawOutput ?? "",
         errorMessage: err instanceof Error ? err.message : String(err),
@@ -225,6 +227,13 @@ export function registerScanHandlers(
       });
     } catch (err) {
       deps.logger.error({ err, userId: user.id }, "failed to save scan results");
+
+      // Clean up orphaned image — Gemini succeeded but DB save failed
+      try {
+        const { unlinkSync } = await import("node:fs");
+        unlinkSync(imagePath);
+      } catch {}
+
       await ctx.reply("Could not save the scan results. Try again or log manually with /log.");
       return;
     }
