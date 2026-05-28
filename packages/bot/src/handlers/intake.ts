@@ -52,7 +52,7 @@ async function handleHistory(ctx: NerifContext) {
     .orderBy(desc(meals.timestamp));
 
   if (rows.length === 0) {
-    await ctx.reply("No meals logged today. Use /log to add one.");
+    await ctx.reply("🍽️ Nothing logged today yet. Add your first meal with /log.");
     return;
   }
 
@@ -67,7 +67,7 @@ async function handleHistory(ctx: NerifContext) {
 
   const totalCal = rows.reduce((s, m) => s + m.totalCalories, 0);
   await ctx.reply(
-    [`Today's meals (${today}):`, "", ...lines, "", `Total: ${totalCal} kcal`].join(
+    [`🍽️ Today's meals (${today}):`, "", ...lines, "", `Total: ${totalCal} kcal`].join(
       "\n",
     ),
   );
@@ -81,7 +81,7 @@ export function registerIntakeHandlers(bot: Bot<NerifContext>) {
     const parsed = parseLogArgs(ctx.match ?? "");
     if (!parsed) {
       await ctx.reply(
-        "Format: /log meal name | kcal | protein | carbs | fat\nExample: /log Chicken rice | 650 | 40 | 70 | 20",
+        "🍽️ Try this format:\n/log meal name | kcal | protein | carbs | fat\n\nExample:\n/log Chicken rice | 650 | 40 | 70 | 20",
       );
       return;
     }
@@ -119,9 +119,8 @@ export function registerIntakeHandlers(bot: Bot<NerifContext>) {
 
     await ctx.reply(
       [
-        `Logged: ${parsed.mealName}`,
+        `✅ Got it: ${parsed.mealName}`,
         `${parsed.totalCalories} kcal · P${parsed.totalProteinG}g C${parsed.totalCarbsG}g F${parsed.totalFatG}g`,
-        `Date: ${today}`,
       ].join("\n"),
     );
   });
@@ -153,7 +152,7 @@ export function registerIntakeHandlers(bot: Bot<NerifContext>) {
       .limit(1);
 
     if (!last) {
-      await ctx.reply("No meals logged today to delete.");
+      await ctx.reply("🍽️ Nothing to delete today.");
       return;
     }
 
@@ -163,7 +162,7 @@ export function registerIntakeHandlers(bot: Bot<NerifContext>) {
       await tx.delete(meals).where(eq(meals.id, last.id));
     });
     await ctx.reply(
-      `Deleted: ${last.mealName} (${last.totalCalories} kcal).`,
+      `✅ Removed: ${last.mealName} (${last.totalCalories} kcal).`,
     );
   });
 }

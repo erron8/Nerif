@@ -60,14 +60,14 @@ async function askNumber(
     if (!text) continue;
     if (text.startsWith("/cancel")) {
       await ctx.reply(
-        "Cancelled. Use /menu when you want to pick something else.",
+        "✅ Cancelled. Use /menu when you want to pick something else.",
       );
       throw new Error("CANCELLED");
     }
     const n = parseNumber(text);
     if (n !== null && n >= min && n <= max) return n;
     await ctx.reply(
-      `That doesn't look right. Enter a number between ${min} and ${max}, or /cancel.`,
+      `❌ That doesn't look right. Enter a number between ${min} and ${max}, or /cancel.`,
     );
   }
 }
@@ -96,18 +96,18 @@ async function askTimezone(
 ): Promise<string> {
   while (true) {
     await ctx.reply(
-      "Enter your timezone (e.g. Asia/Makassar, America/New_York):",
+      "🌍 Enter your timezone (e.g. Asia/Makassar, America/New_York):",
     );
     const tzCtx = await conversation.wait();
     const text = tzCtx.message?.text?.trim();
     if (text && text.startsWith("/cancel")) {
       await ctx.reply(
-        "Cancelled. Use /menu when you want to pick something else.",
+        "✅ Cancelled. Use /menu when you want to pick something else.",
       );
       throw new Error("CANCELLED");
     }
     if (text && VALID_TIMEZONES.has(text)) return text;
-    await ctx.reply("Not a valid IANA timezone. Try again, or /cancel.");
+    await ctx.reply("❌ Not a valid IANA timezone. Try again, or /cancel.");
   }
 }
 
@@ -146,7 +146,7 @@ function createOnboarding(
 
   // Step 1: Name
   await ctx.reply(
-    "Welcome to Nerif! Let's set up your profile.\n\nWhat's your name?",
+    "👋 Welcome to Nerif!\nLet's set up your profile.\n\nWhat's your name?",
   );
   let name: string;
   while (true) {
@@ -154,7 +154,7 @@ function createOnboarding(
     const text = nameCtx.message?.text?.trim();
     if (text && text.startsWith("/cancel")) {
       await ctx.reply(
-        "Cancelled. Use /menu when you want to pick something else.",
+        "✅ Cancelled. Use /menu when you want to pick something else.",
       );
       throw new Error("CANCELLED");
     }
@@ -162,14 +162,14 @@ function createOnboarding(
       name = text;
       break;
     }
-    await ctx.reply("Name can't be empty. Try again, or /cancel.");
+    await ctx.reply("❌ Name can't be empty. Try again, or /cancel.");
   }
 
   // Step 2: Sex
   const sex = await askInlineChoice(
     conversation,
     ctx,
-    "What's your sex? (used for BMR calculation)",
+    "👤 What's your sex? (used for BMR calculation)",
     [
       { label: "Male", value: "M" as const },
       { label: "Female", value: "F" as const },
@@ -177,13 +177,13 @@ function createOnboarding(
   );
 
   // Step 3: Age
-  const age = await askNumber(conversation, ctx, "How old are you?", 10, 120);
+  const age = await askNumber(conversation, ctx, "🎂 How old are you?", 10, 120);
 
   // Step 4: Height
   const heightCm = await askNumber(
     conversation,
     ctx,
-    "Height in cm?",
+    "📏 Height in cm?",
     100,
     250,
   );
@@ -192,7 +192,7 @@ function createOnboarding(
   const currentWeightKg = await askNumber(
     conversation,
     ctx,
-    "Current weight in kg?",
+    "⚖️ Current weight in kg?",
     20,
     300,
   );
@@ -201,7 +201,7 @@ function createOnboarding(
   const targetWeightKg = await askNumber(
     conversation,
     ctx,
-    "Target weight in kg?",
+    "🎯 Target weight in kg?",
     20,
     300,
   );
@@ -210,7 +210,7 @@ function createOnboarding(
   const activityLevel = await askInlineChoice(
     conversation,
     ctx,
-    "How active are you?",
+    "🔥 How active are you?",
     ACTIVITY_OPTIONS.map((o) => ({
       label: `${o.label} — ${o.description}`,
       value: o.value,
@@ -225,7 +225,7 @@ function createOnboarding(
     const useGuessed = await askInlineChoice(
       conversation,
       ctx,
-      `Detected timezone: ${guessedTz}. Use this?`,
+      `🌍 Detected timezone: ${guessedTz}. Use this?`,
       [
         { label: `Yes, ${guessedTz}`, value: "yes" as const },
         { label: "No, pick manually", value: "no" as const },
@@ -266,11 +266,11 @@ function createOnboarding(
   );
 
   const tdeeMsg = [
-    `Your stats:`,
+    `📊 Your stats`,
     `BMR: ${bmr} kcal/day`,
     `TDEE: ${tdee} kcal/day (${activityLevel})`,
     ``,
-    `For your target of ${targetWeightKg} kg, suggested daily intake:`,
+    `🎯 Suggested daily intake for ${targetWeightKg} kg:`,
     `${formulaTarget.dailyCalories} kcal`,
     `Protein: ${formulaTarget.proteinG}g · Carbs: ${formulaTarget.carbsG}g · Fat: ${formulaTarget.fatG}g`,
     ``,
@@ -282,7 +282,7 @@ function createOnboarding(
   const targetMode = await askInlineChoice(
     conversation,
     ctx,
-    "How do you want to set your targets?",
+    "🎯 How do you want to set your targets?",
     [
       {
         label: `Use suggested (${formulaTarget.dailyCalories} kcal)`,
@@ -302,7 +302,7 @@ function createOnboarding(
     dailyCalories = await askNumber(
       conversation,
       ctx,
-      "Daily calories?",
+      "🍽️ Daily calories?",
       1000,
       6000,
     );
@@ -361,7 +361,7 @@ function createOnboarding(
   } catch (err) {
     if ((err as Error).message === "CANCELLED") return;
     // grammY conversations silently swallow thrown errors — reply instead
-    await ctx.reply("Something went wrong saving your profile. Please try /start again.");
+    await ctx.reply("❌ Something went wrong saving your profile. Please try /start again.");
     return;
   }
 
@@ -377,14 +377,14 @@ function createOnboarding(
 
   // Step 12: Confirm
   const summary = [
-    `Profile saved!`,
+    `✅ Profile saved!`,
     ``,
-    `Name: ${name!}`,
+    `👤 ${name!}`,
     `Sex: ${sex} · Age: ${age}`,
     `Height: ${heightCm} cm · Weight: ${currentWeightKg} kg`,
-    `Target: ${targetWeightKg} kg`,
+    `🎯 Target: ${targetWeightKg} kg`,
     `Activity: ${activityLevel}`,
-    `Timezone: ${timezone}`,
+    `🌍 Timezone: ${timezone}`,
   ];
 
   if (targetMode !== "skipped") {
@@ -394,10 +394,10 @@ function createOnboarding(
       `Protein: ${proteinG}g · Carbs: ${carbsG}g · Fat: ${fatG}g`,
     );
   } else {
-    summary.push(``, `Targets: skipped — set them later via /settings`);
+    summary.push(``, `🎯 Targets skipped — set them later via /settings`);
   }
 
-  summary.push(``, `Use /menu to get started.`);
+  summary.push(``, `Open /menu to get started.`);
 
   await ctx.reply(summary.join("\n"));
   };
@@ -419,7 +419,7 @@ export function registerOnboardingHandlers(
 
   bot.command("start", async (ctx) => {
     if (ctx.userRecord) {
-      await ctx.reply(`Welcome back, ${ctx.userRecord.name}. Use /menu.`);
+      await ctx.reply(`👋 Welcome back, ${ctx.userRecord.name}. Use /menu.`);
       return;
     }
 
@@ -428,7 +428,7 @@ export function registerOnboardingHandlers(
 
   bot.command("cancel", async (ctx) => {
     await ctx.reply(
-      "Cancelled. Use /menu when you want to pick something else.",
+      "✅ Cancelled. Use /menu when you want to pick something else.",
     );
   });
 }

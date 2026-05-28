@@ -48,7 +48,7 @@ export function registerUserSchedules(input: {
             jobs.delete(retryId);
             await input.bot.api.sendMessage(
               input.user.telegramId,
-              "Morning check-in: log today's weight when you can.",
+              "⚖️ Morning check-in: log today's weight when you can.",
             );
           }),
         );
@@ -57,7 +57,7 @@ export function registerUserSchedules(input: {
 
       await input.bot.api.sendMessage(
         input.user.telegramId,
-        "Morning check-in: log today's weight when you can.",
+        "⚖️ Morning check-in: log today's weight when you can.",
       );
     }),
   );
@@ -71,11 +71,11 @@ export function registerUserSchedules(input: {
         const result = await aggregateUserToday(input.db, input.user);
         if (!result) return;
 
-        const icon = result.streakHit ? "✓" : "✗";
+        const icon = result.streakHit ? "✅" : "⚠️";
         await input.bot.api.sendMessage(
           input.user.telegramId,
           [
-            `Day summary: ${icon}`,
+            `📊 Day summary ${icon}`,
             `${result.caloriesIn} kcal in · ${result.caloriesBurned} burned`,
             `Streak: ${result.streakCountAfter} day${result.streakCountAfter === 1 ? "" : "s"}`,
           ].join("\n"),

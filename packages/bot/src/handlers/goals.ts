@@ -17,7 +17,7 @@ async function handleGoals(ctx: NerifContext) {
 
   if (rows.length === 0) {
     await ctx.reply(
-      "No goals set yet. Use /settings to configure targets.",
+      "🎯 No goals set yet. Use /settings to configure targets.",
     );
     return;
   }
@@ -25,11 +25,11 @@ async function handleGoals(ctx: NerifContext) {
   const lines = rows.map((g) => {
     const days = daysUntilDeadline(g.deadline);
     const statusIcon =
-      g.status === "active" ? "⏳" : g.status === "hit" ? "✓" : "✗";
+      g.status === "active" ? "⏳" : g.status === "hit" ? "✅" : "❌";
     return `${statusIcon} ${g.type} ${g.targetValue} — ${g.status} (${days}d left)`;
   });
 
-  await ctx.reply(["Goals:", "", ...lines].join("\n"));
+  await ctx.reply(["🎯 Goals", "", ...lines].join("\n"));
 }
 
 export function registerGoalHandlers(bot: Bot<NerifContext>) {

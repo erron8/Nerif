@@ -21,7 +21,7 @@ import {
 import type { NerifContext } from "../context";
 
 async function handleScan(ctx: NerifContext) {
-  await ctx.reply("Send a food photo and Nerif will analyze it.");
+  await ctx.reply("📸 Send a food photo and I'll analyze it.");
 }
 
 function extensionFromFilePath(filePath: string): string {
@@ -72,14 +72,14 @@ export function registerScanHandlers(
 
     if (limit.status === "hard") {
       await ctx.reply(
-        `Daily scan limit reached (${limit.count}/${hardLimit}). Try again tomorrow.`,
+        `📸 Daily scan limit reached (${limit.count}/${hardLimit}). Try again tomorrow.`,
       );
       return;
     }
 
     if (limit.status === "soft") {
       await ctx.reply(
-        `Approaching scan limit (${limit.count}/${softLimit}). This will still work but consider logging manually.`,
+        `📸 Approaching scan limit (${limit.count}/${softLimit}). This will still work but consider logging manually.`,
       );
     }
 
@@ -90,12 +90,12 @@ export function registerScanHandlers(
       file = await ctx.api.getFile(largest.file_id);
     } catch (err) {
       deps.logger.error({ err, userId: user.id }, "failed to get file info");
-      await ctx.reply("Could not download the photo. Try again.");
+      await ctx.reply("❌ Couldn't download the photo. Try again.");
       return;
     }
 
     if (!file.file_path) {
-      await ctx.reply("Could not download the photo. Try again.");
+      await ctx.reply("❌ Couldn't download the photo. Try again.");
       return;
     }
 
@@ -107,7 +107,7 @@ export function registerScanHandlers(
       imageBuffer = Buffer.from(await resp.arrayBuffer());
     } catch (err) {
       deps.logger.error({ err, userId: user.id }, "failed to download photo");
-      await ctx.reply("Could not download the photo. Try again.");
+      await ctx.reply("❌ Couldn't download the photo. Try again.");
       return;
     }
 
@@ -127,12 +127,12 @@ export function registerScanHandlers(
       writeFileSync(imagePath, imageBuffer);
     } catch (err) {
       deps.logger.error({ err, imagePath }, "failed to save image");
-      await ctx.reply("Could not save the image. Try again.");
+      await ctx.reply("❌ Couldn't save the image. Try again.");
       return;
     }
 
     // --- Scan with Gemini ---
-    await ctx.reply("Analyzing photo...");
+    await ctx.reply("📸 Analyzing photo...");
 
     let raw: string;
     let modelName: string;
@@ -173,7 +173,7 @@ export function registerScanHandlers(
       } catch {}
 
       await ctx.reply(
-        "Could not analyze the photo. The AI response was invalid. Try again or log manually with /log.",
+        "❌ Couldn't analyze the photo. Try again or log manually with /log.",
       );
       return;
     }
@@ -234,7 +234,7 @@ export function registerScanHandlers(
         unlinkSync(imagePath);
       } catch {}
 
-      await ctx.reply("Could not save the scan results. Try again or log manually with /log.");
+      await ctx.reply("❌ Couldn't save the scan results. Try again or log manually with /log.");
       return;
     }
 
@@ -249,8 +249,7 @@ export function registerScanHandlers(
     );
 
     const lines = [
-      `Scan result (meal #${savedMealId}):`,
-      `${parsed.meal_name}`,
+      `📸 ${parsed.meal_name}`,
       "",
       ...itemLines,
       "",
@@ -259,14 +258,14 @@ export function registerScanHandlers(
     ];
 
     if (parsed.assumptions.length > 0) {
-      lines.push("", "Assumptions:", ...parsed.assumptions.map((a) => `  - ${a}`));
+      lines.push("", "Notes:", ...parsed.assumptions.map((a) => `  - ${a}`));
     }
 
     if (parsed.uncertainty_notes.length > 0) {
-      lines.push("", "Uncertainty:", ...parsed.uncertainty_notes.map((n) => `  - ${n}`));
+      lines.push("", "⚠️ Uncertainty:", ...parsed.uncertainty_notes.map((n) => `  - ${n}`));
     }
 
-    lines.push("", "This is an AI estimate. Use /log to correct if needed.");
+    lines.push("", "AI estimate. Use /log to correct if needed.");
 
     await ctx.reply(lines.join("\n"));
   });

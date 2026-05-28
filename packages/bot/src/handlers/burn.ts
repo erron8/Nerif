@@ -1,6 +1,6 @@
 import type { Bot } from "grammy";
 
-import { burnEntries, localDateString } from "@nerif/core";
+import { burnEntries } from "@nerif/core";
 
 import type { NerifContext } from "../context";
 
@@ -26,12 +26,10 @@ export function registerBurnHandlers(bot: Bot<NerifContext>) {
     const parsed = parseBurnArgs(ctx.match ?? "");
     if (!parsed) {
       await ctx.reply(
-        "Format: /burn activity | kcal | minutes\nExample: /burn Running | 350 | 45",
+        "🔥 Try this format:\n/burn activity | kcal | minutes\n\nExample:\n/burn Running | 350 | 45",
       );
       return;
     }
-
-    const today = localDateString(new Date(), user.timezone);
 
     await ctx.db.insert(burnEntries).values({
       userId: user.id,
@@ -43,7 +41,7 @@ export function registerBurnHandlers(bot: Bot<NerifContext>) {
 
     const dur = parsed.durationMin ? ` · ${parsed.durationMin} min` : "";
     await ctx.reply(
-      `Burned: ${parsed.activity} — ${parsed.caloriesBurned} kcal${dur}\nDate: ${today}`,
+      `✅ Burned: ${parsed.activity} — ${parsed.caloriesBurned} kcal${dur}`,
     );
   });
 }

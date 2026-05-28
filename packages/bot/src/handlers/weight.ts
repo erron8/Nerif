@@ -13,7 +13,7 @@ export function registerWeightHandlers(bot: Bot<NerifContext>) {
     const raw = ctx.match?.trim();
     const weight = Number(raw);
     if (!raw || !Number.isFinite(weight) || weight < 20 || weight > 300) {
-      await ctx.reply("Format: /weight <kg>\nExample: /weight 77.4");
+      await ctx.reply("⚖️ Try this format:\n/weight <kg>\n\nExample:\n/weight 77.4");
       return;
     }
 
@@ -49,7 +49,7 @@ export function registerWeightHandlers(bot: Bot<NerifContext>) {
     const delta = weight - user.startingWeightKg;
     const sign = delta >= 0 ? "+" : "";
     await ctx.reply(
-      `Weight logged: ${weight} kg (${today})\nFrom start: ${sign}${delta.toFixed(1)} kg`,
+      `✅ Weight logged: ${weight} kg\nFrom start: ${sign}${delta.toFixed(1)} kg`,
     );
   });
 }

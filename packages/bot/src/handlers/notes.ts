@@ -22,7 +22,7 @@ export function registerNoteHandlers(bot: Bot<NerifContext>) {
     const parsed = parseNote(ctx.match ?? "");
     if (!parsed) {
       await ctx.reply(
-        "Format: /note <text> [#tag]\nExample: /note slept 8 hours, feeling great #recovery",
+        "📝 Try this format:\n/note <text> [#tag]\n\nExample:\n/note slept 8 hours, feeling great #recovery",
       );
       return;
     }
@@ -35,11 +35,11 @@ export function registerNoteHandlers(bot: Bot<NerifContext>) {
     });
 
     const tagLine = parsed.tags ? `\nTags: ${parsed.tags}` : "";
-    await ctx.reply(`Note saved: ${parsed.content}${tagLine}`);
+    await ctx.reply(`✅ Note saved: ${parsed.content}${tagLine}`);
   });
 
   bot.callbackQuery("menu:note", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply("Use /note <text> to save a note.");
+    await ctx.reply("📝 Save a note with /note <text>");
   });
 }

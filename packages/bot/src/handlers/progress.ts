@@ -21,24 +21,24 @@ async function handleToday(ctx: NerifContext) {
   if (!result) {
     await ctx.reply(
       [
-        `Today (${today})`,
+        `📊 Today (${today})`,
         "",
-        "No targets set yet. Use /settings to configure.",
+        "🎯 No targets set yet. Use /settings to configure.",
         "",
-        "Use /log, /burn, /weight to add data.",
+        "Add data with /log, /burn, or /weight.",
       ].join("\n"),
     );
     return;
   }
 
-  const icon = result.streakHit ? "✓" : "✗";
+  const icon = result.streakHit ? "✅" : "⚠️";
   const hitLine = result.streakHit
     ? "On track!"
     : `Off track — ${result.calorieHit ? "calories ok" : "calories off"}, ${result.proteinHit ? "protein ok" : "protein low"}`;
 
   await ctx.reply(
     [
-      `Today (${today}) ${icon}`,
+      `📊 Today (${today}) ${icon}`,
       "",
       `${result.caloriesIn} kcal in · ${result.caloriesBurned} burned · net ${result.caloriesIn - result.caloriesBurned}`,
       `${result.proteinG}g protein`,
@@ -46,7 +46,7 @@ async function handleToday(ctx: NerifContext) {
       hitLine,
       `Streak: ${result.streakCountAfter} day${result.streakCountAfter === 1 ? "" : "s"}`,
       "",
-      "Use /log, /burn, /weight to add data.",
+      "Add data with /log, /burn, or /weight.",
     ].join("\n"),
   );
 }
@@ -72,20 +72,20 @@ async function handleWeek(ctx: NerifContext) {
 
   if (rows.length === 0) {
     await ctx.reply(
-      "No daily data yet. Log meals and check /today to build your week.",
+      "📊 No daily data yet. Log meals and check /today to build your week.",
     );
     return;
   }
 
   const lines = rows.map((r) => {
-    const icon = r.streakHit ? "✓" : "✗";
+    const icon = r.streakHit ? "✅" : "❌";
     return `${icon} ${r.date} — ${Math.round(r.caloriesIn)} kcal, streak ${r.streakCountAfter}`;
   });
 
   const hitDays = rows.filter((r) => r.streakHit).length;
   await ctx.reply(
     [
-      `Week view (${rows.length} days):`,
+      `📊 Week view (${rows.length} days)`,
       "",
       ...lines,
       "",

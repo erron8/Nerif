@@ -1,18 +1,16 @@
 import { createConversation, type Conversation } from "@grammyjs/conversations";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { InlineKeyboard, type Bot } from "grammy";
 import type { Logger } from "pino";
 
 import {
   type AppConfig,
   type NerifDb,
-  calculateTdee,
-  localDateString,
+  analysisLogs,
+  meals,
   suggestFormulaTarget,
-  suggestWeightGoalDeadline,
   targets,
   users,
-  scanCounts,
 } from "@nerif/core";
 
 import type { NerifContext } from "../context";
@@ -30,25 +28,27 @@ function isValidTime(s: string): boolean {
 
 function settingsKeyboard() {
   return new InlineKeyboard()
-    .text("Profile", "settings:profile")
-    .text("Targets", "settings:targets")
+    .text("👤 Profile", "settings:profile")
+    .text("🎯 Targets", "settings:targets")
     .row()
-    .text("Notifications", "settings:notifications")
-    .text("DND window", "settings:dnd")
+    .text("🌍 Timezone", "settings:timezone")
+    .text("🌙 DND", "settings:dnd")
     .row()
-    .text("Timezone", "settings:timezone")
-    .text("LLM", "settings:llm")
+    .text("📸 Scan limits", "settings:scan")
+    .text("🔥 Streak", "settings:streak")
     .row()
-    .text("Streak windows", "settings:streak")
-    .text("Scan limits", "settings:scan")
+    .text("← Back to menu", "menu")
     .row()
-    .text("Export data", "settings:export")
-    .text("Reset", "settings:reset");
+    .text("🗑️ Reset data", "settings:reset");
 }
 
 async function handleSettings(ctx: NerifContext) {
   if (!ctx.userRecord) return;
-  await ctx.reply("Settings", { reply_markup: settingsKeyboard() });
+  await ctx.reply("⚙️ Settings\nTune your profile, targets, timezone, and limits.", { reply_markup: settingsKeyboard() });
+}
+
+function backToSettingsKeyboard() {
+  return new InlineKeyboard().text("← Back to settings", "settings:back");
 }
 
 // --- Targets conversation ---
@@ -65,14 +65,14 @@ function createTargetsConversation(db: NerifDb) {
         .select()
         .from(targets)
         .where(eq(targets.userId, user.id))
-        .orderBy(targets.generatedAt)
+        .orderBy(desc(targets.generatedAt))
         .limit(1),
     );
 
     if (currentTarget) {
       await ctx.reply(
         [
-          "Current targets:",
+          "🎯 Current targets:",
           `${currentTarget.dailyCalories} kcal`,
           `P${currentTarget.proteinG}g C${currentTarget.carbsG}g F${currentTarget.fatG}g`,
           "",
@@ -80,16 +80,16 @@ function createTargetsConversation(db: NerifDb) {
         ].join("\n"),
         {
           reply_markup: new InlineKeyboard()
-            .text("Recalculate (formula)", "targets:formula")
-            .text("Enter manually", "targets:manual")
+            .text("🧮 Recalculate", "targets:formula")
+            .text("✏️ Enter manually", "targets:manual")
             .text("Cancel", "targets:cancel"),
         },
       );
     } else {
-      await ctx.reply("No targets set yet. How do you want to set them?", {
+      await ctx.reply("🎯 No targets set yet. How do you want to set them?", {
         reply_markup: new InlineKeyboard()
-          .text("Use formula", "targets:formula")
-          .text("Enter manually", "targets:manual")
+          .text("🧮 Use formula", "targets:formula")
+          .text("✏️ Enter manually", "targets:manual")
           .text("Cancel", "targets:cancel"),
       });
     }
@@ -102,7 +102,7 @@ function createTargetsConversation(db: NerifDb) {
     await choice.answerCallbackQuery();
 
     if (choice.callbackQuery.data === "targets:cancel") {
-      await ctx.reply("Cancelled.");
+      await ctx.reply("✅ Cancelled.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -132,10 +132,11 @@ function createTargetsConversation(db: NerifDb) {
 
       await ctx.reply(
         [
-          "Targets updated (formula):",
+          "✅ Targets updated (formula)",
           `${formulaTarget.dailyCalories} kcal`,
           `P${formulaTarget.proteinG}g C${formulaTarget.carbsG}g F${formulaTarget.fatG}g`,
         ].join("\n"),
+        { reply_markup: backToSettingsKeyboard() },
       );
       return;
     }
@@ -145,7 +146,7 @@ function createTargetsConversation(db: NerifDb) {
     const calResp = await conversation.wait();
     const dailyCalories = Number(calResp.message?.text);
     if (!Number.isFinite(dailyCalories) || dailyCalories < 1000 || dailyCalories > 6000) {
-      await ctx.reply("Invalid. Cancelled.");
+      await ctx.reply("❌ Try a number between 1000 and 6000.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -153,7 +154,7 @@ function createTargetsConversation(db: NerifDb) {
     const protResp = await conversation.wait();
     const proteinG = Number(protResp.message?.text);
     if (!Number.isFinite(proteinG) || proteinG < 20 || proteinG > 400) {
-      await ctx.reply("Invalid. Cancelled.");
+      await ctx.reply("❌ Try a number between 20 and 400.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -161,7 +162,7 @@ function createTargetsConversation(db: NerifDb) {
     const carbResp = await conversation.wait();
     const carbsG = Number(carbResp.message?.text);
     if (!Number.isFinite(carbsG) || carbsG < 0 || carbsG > 800) {
-      await ctx.reply("Invalid. Cancelled.");
+      await ctx.reply("❌ Try a number between 0 and 800.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -169,7 +170,7 @@ function createTargetsConversation(db: NerifDb) {
     const fatResp = await conversation.wait();
     const fatG = Number(fatResp.message?.text);
     if (!Number.isFinite(fatG) || fatG < 20 || fatG > 300) {
-      await ctx.reply("Invalid. Cancelled.");
+      await ctx.reply("❌ Try a number between 20 and 300.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -189,10 +190,11 @@ function createTargetsConversation(db: NerifDb) {
 
     await ctx.reply(
       [
-        "Targets updated (manual):",
+        "✅ Targets updated (manual)",
         `${dailyCalories} kcal`,
         `P${proteinG}g C${carbsG}g F${fatG}g`,
       ].join("\n"),
+      { reply_markup: backToSettingsKeyboard() },
     );
   };
 }
@@ -210,13 +212,13 @@ function createTimezoneConversation(
     if (!user) return;
 
     await ctx.reply(
-      `Current timezone: ${user.timezone}\n\nEnter new timezone (e.g. Asia/Makassar, America/New_York):`,
+      `🌍 Current timezone: ${user.timezone}\n\nEnter new timezone (e.g. Asia/Makassar, America/New_York):`,
     );
     const resp = await conversation.wait();
     const tz = resp.message?.text?.trim();
 
     if (!tz || !VALID_TIMEZONES.has(tz)) {
-      await ctx.reply("Not a valid IANA timezone. Cancelled.");
+      await ctx.reply("❌ Not a valid IANA timezone. Try something like Asia/Makassar.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -234,7 +236,7 @@ function createTimezoneConversation(
       user: ctx.userRecord,
     });
 
-    await ctx.reply(`Timezone updated to ${tz}. Schedules re-registered.`);
+    await ctx.reply(`✅ Timezone updated to ${tz}.`, { reply_markup: backToSettingsKeyboard() });
   };
 }
 
@@ -252,7 +254,7 @@ function createDndConversation(
 
     await ctx.reply(
       [
-        `Current DND: ${user.dndStart} – ${user.dndEnd}`,
+        `🌙 Current DND: ${user.dndStart} – ${user.dndEnd}`,
         "",
         "Enter new DND start time (HH:MM, e.g. 22:30):",
       ].join("\n"),
@@ -260,7 +262,7 @@ function createDndConversation(
     const startResp = await conversation.wait();
     const dndStart = startResp.message?.text?.trim();
     if (!dndStart || !isValidTime(dndStart)) {
-      await ctx.reply("Invalid time. Use HH:MM (00:00–23:59). Cancelled.");
+      await ctx.reply("❌ Use HH:MM format (00:00–23:59).", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -268,7 +270,7 @@ function createDndConversation(
     const endResp = await conversation.wait();
     const dndEnd = endResp.message?.text?.trim();
     if (!dndEnd || !isValidTime(dndEnd)) {
-      await ctx.reply("Invalid time. Use HH:MM (00:00–23:59). Cancelled.");
+      await ctx.reply("❌ Use HH:MM format (00:00–23:59).", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -289,7 +291,7 @@ function createDndConversation(
       user: ctx.userRecord,
     });
 
-    await ctx.reply(`DND window updated: ${dndStart} – ${dndEnd}.`);
+    await ctx.reply(`✅ DND updated: ${dndStart} – ${dndEnd}.`, { reply_markup: backToSettingsKeyboard() });
   };
 }
 
@@ -304,7 +306,7 @@ function createScanLimitsConversation(db: NerifDb) {
 
     await ctx.reply(
       [
-        `Current scan limits: soft=${user.scanSoftLimit ?? "none"}, hard=${user.scanHardLimit ?? "none"}`,
+        `📸 Current scan limits: soft=${user.scanSoftLimit ?? "none"}, hard=${user.scanHardLimit ?? "none"}`,
         "",
         "Enter new soft limit (scans/day before warning, or 0 to disable):",
       ].join("\n"),
@@ -313,7 +315,7 @@ function createScanLimitsConversation(db: NerifDb) {
     const softStr = softResp.message?.text?.trim();
     const softLimit = Number(softStr);
     if (!Number.isFinite(softLimit) || softLimit < 0) {
-      await ctx.reply("Invalid. Cancelled.");
+      await ctx.reply("❌ Enter a number 0 or higher.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -322,12 +324,12 @@ function createScanLimitsConversation(db: NerifDb) {
     const hardStr = hardResp.message?.text?.trim();
     const hardLimit = Number(hardStr);
     if (!Number.isFinite(hardLimit) || hardLimit < 0) {
-      await ctx.reply("Invalid. Cancelled.");
+      await ctx.reply("❌ Enter a number 0 or higher.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
     if (softLimit > 0 && hardLimit > 0 && softLimit > hardLimit) {
-      await ctx.reply("Soft limit cannot exceed hard limit. Cancelled.");
+      await ctx.reply("⚠️ Soft limit cannot exceed hard limit.", { reply_markup: backToSettingsKeyboard() });
       return;
     }
 
@@ -347,26 +349,10 @@ function createScanLimitsConversation(db: NerifDb) {
     };
 
     await ctx.reply(
-      `Scan limits updated: soft=${softLimit > 0 ? softLimit : "none"}, hard=${hardLimit > 0 ? hardLimit : "none"}.`,
+      `✅ Scan limits updated: soft=${softLimit > 0 ? softLimit : "none"}, hard=${hardLimit > 0 ? hardLimit : "none"}.`,
+      { reply_markup: backToSettingsKeyboard() },
     );
   };
-}
-
-// --- LLM settings (placeholder) ---
-async function handleLlm(ctx: NerifContext) {
-  const user = ctx.userRecord;
-  if (!user) return;
-
-  await ctx.reply(
-    [
-      "LLM configuration:",
-      `Provider: ${user.llmProvider ?? "not set"}`,
-      `Model: ${user.llmModel ?? "not set"}`,
-      `API key: ${user.llmApiKeyEncrypted ? "configured" : "not set"}`,
-      "",
-      "LLM settings will be configurable after Gemini scanning is implemented.",
-    ].join("\n"),
-  );
 }
 
 export function registerSettingsHandlers(
@@ -402,7 +388,28 @@ export function registerSettingsHandlers(
 
   bot.callbackQuery("settings:llm", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await handleLlm(ctx);
+    await ctx.reply("⚙️ LLM config is coming soon.", {
+      reply_markup: backToSettingsKeyboard(),
+    });
+  });
+
+  bot.callbackQuery("settings:notifications", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply("⚙️ Notifications are coming soon.", {
+      reply_markup: backToSettingsKeyboard(),
+    });
+  });
+
+  bot.callbackQuery("settings:export", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await ctx.reply("⚙️ Data export is coming soon.", {
+      reply_markup: backToSettingsKeyboard(),
+    });
+  });
+
+  bot.callbackQuery("settings:back", async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await handleSettings(ctx);
   });
 
   bot.callbackQuery("settings:profile", async (ctx) => {
@@ -411,22 +418,12 @@ export function registerSettingsHandlers(
     if (!user) return;
     await ctx.reply(
       [
-        `Name: ${user.name}`,
-        `Sex: ${user.sex} · Age: ${user.age}`,
-        `Height: ${user.heightCm} cm · Weight: ${user.currentWeightKg} kg`,
-        `Target: ${user.targetWeightKg} kg`,
-        `Activity: ${user.activityLevel}`,
-        `Timezone: ${user.timezone}`,
+        `👤 ${user.name}`,
+        `${user.sex} · ${user.age} yrs · ${user.activityLevel}`,
+        `${user.heightCm} cm · ${user.currentWeightKg} kg → ${user.targetWeightKg} kg`,
+        `🌍 ${user.timezone}`,
       ].join("\n"),
-    );
-  });
-
-  bot.callbackQuery("settings:notifications", async (ctx) => {
-    await ctx.answerCallbackQuery();
-    const user = ctx.userRecord;
-    if (!user) return;
-    await ctx.reply(
-      `Notification mode: ${user.notificationMode}\nUse /settings to change.`,
+      { reply_markup: backToSettingsKeyboard() },
     );
   });
 
@@ -438,32 +435,31 @@ export function registerSettingsHandlers(
       .select()
       .from(targets)
       .where(eq(targets.userId, user.id))
+      .orderBy(desc(targets.generatedAt))
       .limit(1);
     if (!t) {
-      await ctx.reply("No targets set. Configure targets first.");
+      await ctx.reply("🎯 No targets set yet. Configure targets first.", {
+        reply_markup: backToSettingsKeyboard(),
+      });
       return;
     }
     await ctx.reply(
       [
-        "Streak windows:",
-        `Calorie window: ±${t.calorieWindowPct}%`,
-        `Protein window: ±${t.proteinWindowPct}%`,
+        "🎯 Streak windows",
+        `Calorie: ±${t.calorieWindowPct}%`,
+        `Protein: ±${t.proteinWindowPct}%`,
       ].join("\n"),
+      { reply_markup: backToSettingsKeyboard() },
     );
-  });
-
-  bot.callbackQuery("settings:export", async (ctx) => {
-    await ctx.answerCallbackQuery();
-    await ctx.reply("Export is not implemented yet.");
   });
 
   bot.callbackQuery("settings:reset", async (ctx) => {
     await ctx.answerCallbackQuery();
     await ctx.reply(
-      "This will delete all your data. Are you sure?",
+      "🗑️ This will permanently delete all your data.\nAre you sure?",
       {
         reply_markup: new InlineKeyboard()
-          .text("Yes, reset", "settings:reset:confirm")
+          .text("Yes, delete everything", "settings:reset:confirm")
           .text("Cancel", "settings:reset:cancel"),
       },
     );
@@ -474,14 +470,41 @@ export function registerSettingsHandlers(
     const user = ctx.userRecord;
     if (!user) return;
     clearUserSchedules(user.id);
-    await deps.db.delete(users).where(eq(users.id, user.id));
+
+    // analysis_logs.mealId uses onDelete: "set null", so deleting meals
+    // leaves orphaned AI logs. Delete those explicitly first, then
+    // let user deletion cascade to everything else.
+    const userMeals = await deps.db.transaction(async (tx) => {
+      const rows = await tx
+        .select({ id: meals.id, imagePath: meals.imagePath })
+        .from(meals)
+        .where(eq(meals.userId, user.id));
+      for (const m of rows) {
+        await tx.delete(analysisLogs).where(eq(analysisLogs.mealId, m.id));
+      }
+      await tx.delete(users).where(eq(users.id, user.id));
+      return rows;
+    });
+
+    // Clean up scanned images from disk
+    const { rmSync } = await import("node:fs");
+    for (const m of userMeals!) {
+      if (m.imagePath) {
+        try { rmSync(m.imagePath, { force: true }); } catch {}
+      }
+    }
+    // Also remove the user's image directory if it exists
+    try { rmSync(`${deps.config.IMAGES_DIR}/${user.id}`, { recursive: true, force: true }); } catch {}
+
     ctx.userRecord = undefined;
-    await ctx.reply("All data deleted. Use /start to begin again.");
+    await ctx.reply("✅ All data deleted. Use /start to begin again.");
   });
 
   bot.callbackQuery("settings:reset:cancel", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply("Reset cancelled.");
+    await ctx.reply("✅ Reset cancelled.", {
+      reply_markup: backToSettingsKeyboard(),
+    });
   });
 
   bot.callbackQuery("menu:settings", async (ctx) => {

@@ -35,7 +35,7 @@ export function userLoadMiddleware(
     // Guard: block user-specific text commands if no profile exists
     const command = ctx.message?.text?.match(/^\/(\w+)/)?.[1];
     if (command && !PUBLIC_COMMANDS.has(command) && !ctx.userRecord) {
-      await ctx.reply("Set up your profile first: /start");
+      await ctx.reply("👋 Set up your profile first with /start.");
       return;
     }
 
@@ -43,7 +43,7 @@ export function userLoadMiddleware(
     const callbackData = ctx.callbackQuery?.data;
     if (callbackData && !PUBLIC_CALLBACKS.has(callbackData) && !ctx.userRecord) {
       await ctx.answerCallbackQuery();
-      await ctx.reply("Set up your profile first: /start");
+      await ctx.reply("👋 Set up your profile first with /start.");
       return;
     }
 
