@@ -1,10 +1,8 @@
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 import type { Bot } from "grammy";
 
 import {
-  burnEntries,
   dailyResults,
-  meals,
   aggregateUserToday,
   localDateString,
 } from "@nerif/core";
@@ -57,8 +55,8 @@ async function handleWeek(ctx: NerifContext) {
   const user = ctx.userRecord;
   if (!user) return;
 
-  const weekAgo = new Date();
-  weekAgo.setDate(weekAgo.getDate() - 6);
+  // Compute 6 days ago in UTC to avoid server-timezone skew
+  const weekAgo = new Date(Date.now() - 6 * 86_400_000);
   const startDate = localDateString(weekAgo, user.timezone);
 
   const rows = await ctx.db

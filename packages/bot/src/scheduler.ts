@@ -38,6 +38,20 @@ export function registerUserSchedules(input: {
     morningId,
     new Cron("0 7 * * *", { timezone: input.user.timezone }, async () => {
       if (isInDndWindow(new Date(), input.user.dndStart, input.user.dndEnd, input.user.timezone)) {
+        // Retry at 08:00 if DND suppressed the 07:00 check-in
+        const retryId = `${input.user.id}:morning-retry`;
+        const existing = jobs.get(retryId);
+        if (existing) existing.stop();
+        jobs.set(
+          retryId,
+          new Cron("0 8 * * *", { timezone: input.user.timezone }, async () => {
+            jobs.delete(retryId);
+            await input.bot.api.sendMessage(
+              input.user.telegramId,
+              "Morning check-in: log today's weight when you can.",
+            );
+          }),
+        );
         return;
       }
 
@@ -48,11 +62,11 @@ export function registerUserSchedules(input: {
     }),
   );
 
-  // End-of-day aggregation — runs at 23:55 user-local
+  // End-of-day aggregation — runs at 23:59 user-local
   const eodId = `${input.user.id}:eod`;
   jobs.set(
     eodId,
-    new Cron("55 23 * * *", { timezone: input.user.timezone }, async () => {
+    new Cron("59 23 * * *", { timezone: input.user.timezone }, async () => {
       try {
         const result = await aggregateUserToday(input.db, input.user);
         if (!result) return;
@@ -99,7 +113,7 @@ export function isInDndWindow(
   }).formatToParts(now);
 
   const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)!.value);
+    Number(parts.find((p) => p.type === type)?.value ?? "0");
   const minutes = get("hour") * 60 + get("minute");
   const startMinutes = parseTime(start);
   const endMinutes = parseTime(end);

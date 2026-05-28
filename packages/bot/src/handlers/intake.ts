@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, lt } from "drizzle-orm";
 import type { Bot } from "grammy";
 
-import { meals, mealItems, localDateString, toUtcBounds } from "@nerif/core";
+import { analysisLogs, meals, mealItems, localDateString, toUtcBounds } from "@nerif/core";
 
 import type { NerifContext } from "../context";
 
@@ -157,7 +157,11 @@ export function registerIntakeHandlers(bot: Bot<NerifContext>) {
       return;
     }
 
-    await ctx.db.delete(meals).where(eq(meals.id, last.id));
+    // Delete meal (cascades to meal_items) + orphaned analysis_logs
+    await ctx.db.transaction(async (tx) => {
+      await tx.delete(analysisLogs).where(eq(analysisLogs.mealId, last.id));
+      await tx.delete(meals).where(eq(meals.id, last.id));
+    });
     await ctx.reply(
       `Deleted: ${last.mealName} (${last.totalCalories} kcal).`,
     );

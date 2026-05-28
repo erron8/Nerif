@@ -24,13 +24,17 @@ async function handleScan(ctx: NerifContext) {
   await ctx.reply("Send a food photo and Nerif will analyze it.");
 }
 
-function extensionFromMimeType(mime: string): string {
-  const map: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-  };
-  return map[mime] ?? "jpg";
+function extensionFromFilePath(filePath: string): string {
+  const ext = filePath.split(".").pop()?.toLowerCase();
+  if (ext === "png") return "png";
+  if (ext === "webp") return "webp";
+  return "jpg";
+}
+
+function mimeTypeFromExtension(ext: string): string {
+  if (ext === "png") return "image/png";
+  if (ext === "webp") return "image/webp";
+  return "image/jpeg";
 }
 
 export function registerScanHandlers(
@@ -106,7 +110,8 @@ export function registerScanHandlers(
     }
 
     // --- Save image to disk ---
-    const ext = extensionFromMimeType(largest.file_unique_id ? "image/jpeg" : "image/jpeg");
+    const ext = extensionFromFilePath(file.file_path);
+    const mimeType = mimeTypeFromExtension(ext);
     const imagePath = buildImagePath(
       deps.config.IMAGES_DIR,
       user.id,
@@ -137,7 +142,7 @@ export function registerScanHandlers(
         imagePath,
         prompt,
         ...(deps.config.USER_LLM_MODEL ? { model: deps.config.USER_LLM_MODEL } : {}),
-        mimeType: "image/jpeg",
+        mimeType,
       });
       raw = result.raw;
       modelName = result.modelName;
@@ -158,6 +163,12 @@ export function registerScanHandlers(
         rawAiOutput: rawOutput ?? "",
         errorMessage: err instanceof Error ? err.message : String(err),
       });
+
+      // Clean up orphaned image file
+      try {
+        const { unlinkSync } = await import("node:fs");
+        unlinkSync(imagePath);
+      } catch {}
 
       await ctx.reply(
         "Could not analyze the photo. The AI response was invalid. Try again or log manually with /log.",

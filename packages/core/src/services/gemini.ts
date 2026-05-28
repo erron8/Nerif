@@ -120,7 +120,6 @@ export async function scanFoodImage(input: {
   });
 
   const raw = response.text ?? "";
-  console.log("[gemini] raw response (first 500 chars):", raw.slice(0, 500));
 
   try {
     const parsed = parseJsonResponse(raw, ScanResultSchema);

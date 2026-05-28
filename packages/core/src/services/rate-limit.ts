@@ -24,11 +24,12 @@ export async function checkScanLimit(
 
   const count = row?.count ?? 0;
 
-  if (count >= input.hardLimit) {
+  // 0 means "disabled" — skip the check
+  if (input.hardLimit > 0 && count >= input.hardLimit) {
     return { status: "hard", count };
   }
 
-  if (count >= input.softLimit) {
+  if (input.softLimit > 0 && count >= input.softLimit) {
     return { status: "soft", count };
   }
 

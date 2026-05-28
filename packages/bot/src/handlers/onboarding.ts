@@ -330,7 +330,7 @@ function createOnboarding(
             targetWeightKg,
             targetMode:
               targetMode === "formula"
-                ? "manual"
+                ? "ai"
                 : (targetMode as "manual" | "skipped"),
             timezone,
           })
@@ -360,7 +360,9 @@ function createOnboarding(
     });
   } catch (err) {
     if ((err as Error).message === "CANCELLED") return;
-    throw err;
+    // grammY conversations silently swallow thrown errors — reply instead
+    await ctx.reply("Something went wrong saving your profile. Please try /start again.");
+    return;
   }
 
   ctx.userRecord = savedUser;
