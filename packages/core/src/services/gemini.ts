@@ -79,19 +79,30 @@ export const TargetAnalysisSchema = z
 
 export type TargetAnalysis = z.infer<typeof TargetAnalysisSchema>;
 
+export interface ScanImageResult {
+  parsed: ScanResult;
+  raw: string;
+  modelName: string;
+}
+
+/**
+ * Scan a food image with Gemini and return parsed result + raw output.
+ * Throws on Gemini API failure or Zod validation failure.
+ */
 export async function scanFoodImage(input: {
   apiKey: string;
   imagePath: string;
   prompt: string;
   model?: string;
   mimeType?: string;
-}): Promise<ScanResult> {
+}): Promise<ScanImageResult> {
+  const modelName = input.model ?? "gemini-2.5-flash";
   const ai = new GoogleGenAI({ apiKey: input.apiKey });
   const imageBytes = await Bun.file(input.imagePath).bytes();
   const data = Buffer.from(imageBytes).toString("base64");
 
   const response = await ai.models.generateContent({
-    model: input.model ?? "gemini-2.5-flash",
+    model: modelName,
     contents: [
       {
         role: "user",
@@ -108,7 +119,17 @@ export async function scanFoodImage(input: {
     ],
   });
 
-  return parseJsonResponse(response.text ?? "", ScanResultSchema);
+  const raw = response.text ?? "";
+  console.log("[gemini] raw response (first 500 chars):", raw.slice(0, 500));
+
+  try {
+    const parsed = parseJsonResponse(raw, ScanResultSchema);
+    return { parsed, raw, modelName };
+  } catch (err) {
+    // Attach raw output to the error so callers can log it
+    (err as any).raw = raw;
+    throw err;
+  }
 }
 
 export async function analyzeTarget(input: {
@@ -137,4 +158,25 @@ export async function analyzeTarget(input: {
 function parseJsonResponse<T>(raw: string, schema: z.ZodType<T>) {
   const trimmed = raw.trim().replace(/^```json\s*/i, "").replace(/```$/i, "");
   return schema.parse(JSON.parse(trimmed));
+}
+
+/**
+ * Build a stable image storage path: IMAGES_DIR/userId/YYYY-MM-DD/timestamp-fileId.ext
+ */
+export function buildImagePath(
+  imagesDir: string,
+  userId: number,
+  date: string,
+  fileId: string,
+  ext = "jpg",
+): string {
+  return `${imagesDir}/${userId}/${date}/${Date.now()}-${fileId}.${ext}`;
+}
+
+/**
+ * Read the food scan prompt from the package's prompts directory.
+ */
+export async function readFoodScanPrompt(): Promise<string> {
+  // gemini.ts is at src/services/, prompt is at src/prompts/
+  return Bun.file(new URL("../prompts/food-scan-v1.txt", import.meta.url)).text();
 }

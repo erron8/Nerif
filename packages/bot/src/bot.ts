@@ -42,7 +42,7 @@ export function createBot(input: {
   registerOnboardingHandlers(bot, input);
   registerMenuHandlers(bot);
   registerIntakeHandlers(bot);
-  registerScanHandlers(bot);
+  registerScanHandlers(bot, input);
   registerBurnHandlers(bot);
   registerWeightHandlers(bot);
   registerProgressHandlers(bot);

@@ -20,6 +20,14 @@ import { clearUserSchedules, registerUserSchedules } from "../scheduler";
 
 const VALID_TIMEZONES = new Set(Intl.supportedValuesOf("timeZone"));
 
+function isValidTime(s: string): boolean {
+  if (!/^\d{2}:\d{2}$/.test(s)) return false;
+  const parts = s.split(":");
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+}
+
 function settingsKeyboard() {
   return new InlineKeyboard()
     .text("Profile", "settings:profile")
@@ -109,15 +117,16 @@ function createTargetsConversation(db: NerifDb) {
       });
 
       await conversation.external(async () => {
-        // Delete old targets
-        await db.delete(targets).where(eq(targets.userId, user.id));
-        await db.insert(targets).values({
-          userId: user.id,
-          dailyCalories: formulaTarget.dailyCalories,
-          proteinG: formulaTarget.proteinG,
-          carbsG: formulaTarget.carbsG,
-          fatG: formulaTarget.fatG,
-          generatedBy: "formula",
+        await db.transaction(async (tx) => {
+          await tx.delete(targets).where(eq(targets.userId, user.id));
+          await tx.insert(targets).values({
+            userId: user.id,
+            dailyCalories: formulaTarget.dailyCalories,
+            proteinG: formulaTarget.proteinG,
+            carbsG: formulaTarget.carbsG,
+            fatG: formulaTarget.fatG,
+            generatedBy: "formula",
+          });
         });
       });
 
@@ -165,14 +174,16 @@ function createTargetsConversation(db: NerifDb) {
     }
 
     await conversation.external(async () => {
-      await db.delete(targets).where(eq(targets.userId, user.id));
-      await db.insert(targets).values({
-        userId: user.id,
-        dailyCalories,
-        proteinG,
-        carbsG,
-        fatG,
-        generatedBy: "user",
+      await db.transaction(async (tx) => {
+        await tx.delete(targets).where(eq(targets.userId, user.id));
+        await tx.insert(targets).values({
+          userId: user.id,
+          dailyCalories,
+          proteinG,
+          carbsG,
+          fatG,
+          generatedBy: "user",
+        });
       });
     });
 
@@ -248,16 +259,16 @@ function createDndConversation(
     );
     const startResp = await conversation.wait();
     const dndStart = startResp.message?.text?.trim();
-    if (!dndStart || !/^\d{2}:\d{2}$/.test(dndStart)) {
-      await ctx.reply("Invalid format. Cancelled.");
+    if (!dndStart || !isValidTime(dndStart)) {
+      await ctx.reply("Invalid time. Use HH:MM (00:00–23:59). Cancelled.");
       return;
     }
 
     await ctx.reply("Enter new DND end time (HH:MM, e.g. 06:30):");
     const endResp = await conversation.wait();
     const dndEnd = endResp.message?.text?.trim();
-    if (!dndEnd || !/^\d{2}:\d{2}$/.test(dndEnd)) {
-      await ctx.reply("Invalid format. Cancelled.");
+    if (!dndEnd || !isValidTime(dndEnd)) {
+      await ctx.reply("Invalid time. Use HH:MM (00:00–23:59). Cancelled.");
       return;
     }
 
@@ -312,6 +323,11 @@ function createScanLimitsConversation(db: NerifDb) {
     const hardLimit = Number(hardStr);
     if (!Number.isFinite(hardLimit) || hardLimit < 0) {
       await ctx.reply("Invalid. Cancelled.");
+      return;
+    }
+
+    if (softLimit > 0 && hardLimit > 0 && softLimit > hardLimit) {
+      await ctx.reply("Soft limit cannot exceed hard limit. Cancelled.");
       return;
     }
 
