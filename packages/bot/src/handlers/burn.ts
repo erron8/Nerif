@@ -4,21 +4,18 @@ import { burnEntries, localDateString } from "@nerif/core";
 
 import type { NerifContext } from "../context";
 
-function parseBurnArgs(text: string) {
-  const parts = text
-    .replace(/^\/burn\s*/, "")
-    .split("|")
-    .map((s) => s.trim());
+function parseBurnArgs(raw: string) {
+  const parts = raw.split("|").map((s) => s.trim());
   if (parts.length < 2) return null;
   const [activity, calStr, minStr] = parts;
   const caloriesBurned = Number(calStr);
-  if (!activity || !Number.isFinite(caloriesBurned)) return null;
-  const durationMin = minStr ? Number(minStr) : null;
-  return {
-    activity,
-    caloriesBurned,
-    durationMin: durationMin && Number.isFinite(durationMin) ? durationMin : null,
-  };
+  if (!activity || !Number.isFinite(caloriesBurned) || caloriesBurned < 0 || caloriesBurned > 5000) return null;
+  if (parts.length >= 3) {
+    const durationMin = Number(minStr);
+    if (!Number.isFinite(durationMin) || durationMin <= 0 || durationMin > 1440) return null;
+    return { activity, caloriesBurned, durationMin };
+  }
+  return { activity, caloriesBurned, durationMin: null };
 }
 
 export function registerBurnHandlers(bot: Bot<NerifContext>) {
@@ -26,7 +23,7 @@ export function registerBurnHandlers(bot: Bot<NerifContext>) {
     const user = ctx.userRecord;
     if (!user) return;
 
-    const parsed = parseBurnArgs(ctx.message?.text ?? "");
+    const parsed = parseBurnArgs(ctx.match ?? "");
     if (!parsed) {
       await ctx.reply(
         "Format: /burn activity | kcal | minutes\nExample: /burn Running | 350 | 45",

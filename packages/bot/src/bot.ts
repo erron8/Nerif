@@ -48,7 +48,7 @@ export function createBot(input: {
   registerProgressHandlers(bot);
   registerGoalHandlers(bot);
   registerNoteHandlers(bot);
-  registerSettingsHandlers(bot);
+  registerSettingsHandlers(bot, input);
   registerExportHandlers(bot);
 
   bot.catch((error) => {

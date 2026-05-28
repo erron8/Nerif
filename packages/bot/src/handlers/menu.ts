@@ -13,10 +13,6 @@ export function registerMenuHandlers(bot: Bot<NerifContext>) {
     );
   });
 
-  bot.callbackQuery("menu:scan", async (ctx) => {
-    await ctx.answerCallbackQuery();
-    await ctx.reply("Send a food photo with /scan to analyze it.");
-  });
 
   bot.callbackQuery("menu:burn", async (ctx) => {
     await ctx.answerCallbackQuery();

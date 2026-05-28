@@ -5,7 +5,7 @@ import { notes } from "@nerif/core";
 import type { NerifContext } from "../context";
 
 function parseNote(text: string): { content: string; tags: string } | null {
-  const raw = text.replace(/^\/note\s*/, "").trim();
+  const raw = text.trim();
   if (!raw) return null;
   const tagMatches = raw.match(/#\w+/g) ?? [];
   const tags = tagMatches.join(",");
@@ -19,7 +19,7 @@ export function registerNoteHandlers(bot: Bot<NerifContext>) {
     const user = ctx.userRecord;
     if (!user) return;
 
-    const parsed = parseNote(ctx.message?.text ?? "");
+    const parsed = parseNote(ctx.match ?? "");
     if (!parsed) {
       await ctx.reply(
         "Format: /note <text> [#tag]\nExample: /note slept 8 hours, feeling great #recovery",

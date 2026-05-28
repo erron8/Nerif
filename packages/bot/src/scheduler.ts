@@ -3,7 +3,7 @@ import type { Bot } from "grammy";
 import type { Logger } from "pino";
 
 import type { AppConfig, NerifDb } from "@nerif/core";
-import { users } from "@nerif/core";
+import { aggregateUserToday, users } from "@nerif/core";
 
 import type { NerifContext } from "./context";
 
@@ -26,16 +26,18 @@ export async function registerSchedules(input: {
 export function registerUserSchedules(input: {
   bot: Bot<NerifContext>;
   config: AppConfig;
+  db: NerifDb;
   logger: Logger;
   user: typeof users.$inferSelect;
 }) {
   clearUserSchedules(input.user.id);
 
+  // Morning check-in
   const morningId = `${input.user.id}:morning`;
   jobs.set(
     morningId,
     new Cron("0 7 * * *", { timezone: input.user.timezone }, async () => {
-      if (isInDndWindow(new Date(), input.user.dndStart, input.user.dndEnd)) {
+      if (isInDndWindow(new Date(), input.user.dndStart, input.user.dndEnd, input.user.timezone)) {
         return;
       }
 
@@ -43,6 +45,33 @@ export function registerUserSchedules(input: {
         input.user.telegramId,
         "Morning check-in: log today's weight when you can.",
       );
+    }),
+  );
+
+  // End-of-day aggregation — runs at 23:55 user-local
+  const eodId = `${input.user.id}:eod`;
+  jobs.set(
+    eodId,
+    new Cron("55 23 * * *", { timezone: input.user.timezone }, async () => {
+      try {
+        const result = await aggregateUserToday(input.db, input.user);
+        if (!result) return;
+
+        const icon = result.streakHit ? "✓" : "✗";
+        await input.bot.api.sendMessage(
+          input.user.telegramId,
+          [
+            `Day summary: ${icon}`,
+            `${result.caloriesIn} kcal in · ${result.caloriesBurned} burned`,
+            `Streak: ${result.streakCountAfter} day${result.streakCountAfter === 1 ? "" : "s"}`,
+          ].join("\n"),
+        );
+      } catch (err) {
+        input.logger.error(
+          { err, userId: input.user.id },
+          "end-of-day aggregation failed",
+        );
+      }
     }),
   );
 }
@@ -56,8 +85,22 @@ export function clearUserSchedules(userId: number) {
   }
 }
 
-export function isInDndWindow(now: Date, start: string, end: string) {
-  const minutes = now.getHours() * 60 + now.getMinutes();
+export function isInDndWindow(
+  now: Date,
+  start: string,
+  end: string,
+  timezone?: string,
+) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone ?? "UTC",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const get = (type: string) =>
+    Number(parts.find((p) => p.type === type)!.value);
+  const minutes = get("hour") * 60 + get("minute");
   const startMinutes = parseTime(start);
   const endMinutes = parseTime(end);
 

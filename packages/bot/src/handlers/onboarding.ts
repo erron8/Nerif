@@ -368,6 +368,7 @@ function createOnboarding(
   registerUserSchedules({
     bot: deps.bot,
     config: deps.config,
+    db,
     logger: deps.logger,
     user: savedUser,
   });

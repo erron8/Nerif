@@ -10,7 +10,7 @@ export function registerWeightHandlers(bot: Bot<NerifContext>) {
     const user = ctx.userRecord;
     if (!user) return;
 
-    const raw = ctx.message?.text?.replace(/^\/weight\s*/, "").trim();
+    const raw = ctx.match?.trim();
     const weight = Number(raw);
     if (!raw || !Number.isFinite(weight) || weight < 20 || weight > 300) {
       await ctx.reply("Format: /weight <kg>\nExample: /weight 77.4");

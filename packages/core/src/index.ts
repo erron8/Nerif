@@ -2,6 +2,7 @@ export * from "./config";
 export * from "./date";
 export * from "./db/client";
 export * from "./db/schema";
+export * from "./services/daily";
 export * from "./services/gemini";
 export * from "./services/goal-eval";
 export * from "./services/nutrition";
