@@ -8,22 +8,26 @@ export function registerMenuHandlers(bot: Bot<NerifContext>) {
 
   bot.callbackQuery("menu:log", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply("Manual food logging lands in the next build slice. Use /log.");
+    await ctx.reply(
+      "Format: /log meal name | kcal | protein | carbs | fat\nExample: /log Chicken rice | 650 | 40 | 70 | 20",
+    );
   });
 
   bot.callbackQuery("menu:scan", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply("Send a food photo after /scan.");
+    await ctx.reply("Send a food photo with /scan to analyze it.");
   });
 
   bot.callbackQuery("menu:burn", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply("Use /burn to log activity calories.");
+    await ctx.reply(
+      "Format: /burn activity | kcal | minutes\nExample: /burn Running | 350 | 45",
+    );
   });
 
   bot.callbackQuery("menu:weight", async (ctx) => {
     await ctx.answerCallbackQuery();
-    await ctx.reply("Use /weight to log today's weight.");
+    await ctx.reply("Format: /weight <kg>\nExample: /weight 77.4");
   });
 }
 

@@ -8,6 +8,7 @@ import {
   type AppConfig,
   type NerifDb,
   calculateTdee,
+  localDateString,
   suggestFormulaTarget,
   suggestWeightGoalDeadline,
   users,
@@ -98,8 +99,14 @@ async function askTimezone(
       "Enter your timezone (e.g. Asia/Makassar, America/New_York):",
     );
     const tzCtx = await conversation.wait();
-    const tz = tzCtx.message?.text?.trim();
-    if (tz && VALID_TIMEZONES.has(tz)) return tz;
+    const text = tzCtx.message?.text?.trim();
+    if (text && text.startsWith("/cancel")) {
+      await ctx.reply(
+        "Cancelled. Use /menu when you want to pick something else.",
+      );
+      throw new Error("CANCELLED");
+    }
+    if (text && VALID_TIMEZONES.has(text)) return text;
     await ctx.reply("Not a valid IANA timezone. Try again, or /cancel.");
   }
 }
@@ -126,7 +133,10 @@ function langCodeToTimezone(code: string | undefined): string | null {
   return map[code] ?? null;
 }
 
-function createOnboarding(db: NerifDb) {
+function createOnboarding(
+  db: NerifDb,
+  deps: { bot: Bot<NerifContext>; config: AppConfig; logger: Logger },
+) {
   return async function onboarding(
     conversation: Conversation<NerifContext>,
     ctx: NerifContext,
@@ -142,6 +152,12 @@ function createOnboarding(db: NerifDb) {
   while (true) {
     const nameCtx = await conversation.wait();
     const text = nameCtx.message?.text?.trim();
+    if (text && text.startsWith("/cancel")) {
+      await ctx.reply(
+        "Cancelled. Use /menu when you want to pick something else.",
+      );
+      throw new Error("CANCELLED");
+    }
     if (text && text.length > 0) {
       name = text;
       break;
@@ -299,46 +315,48 @@ function createOnboarding(db: NerifDb) {
   let savedUser: typeof users.$inferSelect;
   try {
     savedUser = await conversation.external(async () => {
-      const [user] = await db
-        .insert(users)
-        .values({
-          telegramId,
-          name: name!,
-          sex: sex as Sex,
-          age,
-          heightCm,
-          activityLevel: activityLevel as ActivityLevel,
-          startingWeightKg: currentWeightKg,
-          currentWeightKg,
-          targetWeightKg,
-          targetMode:
-            targetMode === "formula"
-              ? "manual"
-              : (targetMode as "manual" | "skipped"),
-          timezone,
-        })
-        .returning();
-      if (!user) throw new Error("Failed to insert user");
+      return db.transaction(async (tx) => {
+        const [user] = await tx
+          .insert(users)
+          .values({
+            telegramId,
+            name: name!,
+            sex: sex as Sex,
+            age,
+            heightCm,
+            activityLevel: activityLevel as ActivityLevel,
+            startingWeightKg: currentWeightKg,
+            currentWeightKg,
+            targetWeightKg,
+            targetMode:
+              targetMode === "formula"
+                ? "manual"
+                : (targetMode as "manual" | "skipped"),
+            timezone,
+          })
+          .returning();
+        if (!user) throw new Error("Failed to insert user");
 
-      const today = new Date().toISOString().split("T")[0]!;
-      await db.insert(weightLogs).values({
-        userId: user.id,
-        date: today,
-        weightKg: currentWeightKg,
-      });
-
-      if (targetMode !== "skipped") {
-        await db.insert(targets).values({
+        const today = localDateString(new Date(), timezone);
+        await tx.insert(weightLogs).values({
           userId: user.id,
-          dailyCalories,
-          proteinG,
-          carbsG,
-          fatG,
-          generatedBy: targetMode === "formula" ? "formula" : "user",
+          date: today,
+          weightKg: currentWeightKg,
         });
-      }
 
-      return user;
+        if (targetMode !== "skipped") {
+          await tx.insert(targets).values({
+            userId: user.id,
+            dailyCalories,
+            proteinG,
+            carbsG,
+            fatG,
+            generatedBy: targetMode === "formula" ? "formula" : "user",
+          });
+        }
+
+        return user;
+      });
     });
   } catch (err) {
     if ((err as Error).message === "CANCELLED") return;
@@ -346,6 +364,13 @@ function createOnboarding(db: NerifDb) {
   }
 
   ctx.userRecord = savedUser;
+
+  registerUserSchedules({
+    bot: deps.bot,
+    config: deps.config,
+    logger: deps.logger,
+    user: savedUser,
+  });
 
   // Step 12: Confirm
   const summary = [
@@ -379,7 +404,15 @@ export function registerOnboardingHandlers(
   bot: Bot<NerifContext>,
   deps: { config: AppConfig; db: NerifDb; logger: Logger },
 ) {
-  bot.use(createConversation(createOnboarding(deps.db)));
+  bot.use(
+    createConversation(
+      createOnboarding(deps.db, {
+        bot,
+        config: deps.config,
+        logger: deps.logger,
+      }),
+    ),
+  );
 
   bot.command("start", async (ctx) => {
     if (ctx.userRecord) {
@@ -388,16 +421,6 @@ export function registerOnboardingHandlers(
     }
 
     await ctx.conversation.enter("onboarding");
-
-    // After conversation completes, register schedules if user was created
-    if (ctx.userRecord) {
-      registerUserSchedules({
-        bot,
-        config: deps.config,
-        logger: deps.logger,
-        user: ctx.userRecord,
-      });
-    }
   });
 
   bot.command("cancel", async (ctx) => {
