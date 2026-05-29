@@ -7,9 +7,9 @@ Nerif is a Bun/TypeScript monorepo with:
 
 - `packages/core` — Drizzle schema, SQLite client, config, prompts, and shared services
 - `packages/bot` — grammY Telegram bot
-- `packages/web` — Next.js dashboard placeholder for a later web UI
+- `packages/web` — Next.js web app
 
-## What Works
+## Features
 
 - Onboarding with profile setup, timezone, activity level, TDEE estimate, and targets
 - Main Telegram menu with inline buttons
@@ -25,13 +25,6 @@ Nerif is a Bun/TypeScript monorepo with:
 - Morning weight reminders and end-of-day summaries
 - SQLite persistence through Drizzle
 - Docker Compose deployment
-
-Some surfaces are intentionally still placeholders:
-
-- `/export`
-- Notification-mode configuration
-- LLM provider/API-key settings UI
-- Web dashboard
 
 ## Requirements
 
@@ -147,7 +140,7 @@ docker compose logs -f bot
 
 ## Testing
 
-Current test coverage includes core service tests and focused bot behavior tests:
+Test coverage includes core service tests and bot behavior tests:
 
 - Date/timezone helpers, including DST edge cases
 - Daily aggregation
@@ -165,10 +158,3 @@ Run all tests:
 ```sh
 bun test
 ```
-
-## Known Gaps
-
-- README and code assume polling via `bot.start`; webhook deployment is not configured.
-- Export, notification settings, LLM settings, and the web dashboard are not complete.
-- There are no generated Drizzle migration files yet; schema changes are applied with `db:push`.
-- Bot test coverage is focused on critical behavior, not every Telegram handler path.
