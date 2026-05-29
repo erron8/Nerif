@@ -107,6 +107,8 @@ export const mealItems = sqliteTable("meal_items", {
 
 export const analysisLogs = sqliteTable("analysis_logs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .references(() => users.id, { onDelete: "cascade" }),
   mealId: integer("meal_id").references(() => meals.id, { onDelete: "set null" }),
   modelName: text("model_name").notNull(),
   promptVersion: text("prompt_version").notNull(),

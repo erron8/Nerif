@@ -1,50 +1,174 @@
 # Nerif
 
 Telegram-based personal fitness assistant for calories, weight, goals, progress,
-and food-photo analysis.
+notes, and food-photo analysis.
 
-This repo follows the scaffold described in `fitness-bot-spec.md`:
+Nerif is a Bun/TypeScript monorepo with:
 
-- Bun workspace monorepo
-- `packages/core` for schema, config, prompts, and shared business logic
-- `packages/bot` for the grammY Telegram bot
-- `packages/web` as a Next.js dashboard placeholder for v2
-- SQLite through `bun:sqlite` at runtime, Drizzle schema and `db:push` tooling
+- `packages/core` — Drizzle schema, SQLite client, config, prompts, and shared services
+- `packages/bot` — grammY Telegram bot
+- `packages/web` — Next.js dashboard placeholder for a later web UI
+
+## What Works
+
+- Onboarding with profile setup, timezone, activity level, TDEE estimate, and targets
+- Main Telegram menu with inline buttons
+- Manual food logging with `/log`
+- Food-photo scanning with Gemini via `/scan`
+- Scan rate limits with per-user overrides
+- Exercise burn logging with `/burn`
+- Weight logging with `/weight`
+- Notes with `/note`
+- Today and week progress views
+- Goal and streak views
+- Settings for targets, timezone, DND window, scan limits, profile, and reset
+- Morning weight reminders and end-of-day summaries
+- SQLite persistence through Drizzle
+- Docker Compose deployment
+
+Some surfaces are intentionally still placeholders:
+
+- `/export`
+- Notification-mode configuration
+- LLM provider/API-key settings UI
+- Web dashboard
+
+## Requirements
+
+- Bun
+- Telegram bot token from BotFather
+- Gemini API key
+- SQLite-compatible local filesystem storage
 
 ## Setup
 
 ```sh
 bun install
 cp .env.example .env
-bun run db:push
 ```
 
-Fill `.env` with `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, and a 32-byte hex
-`ENCRYPTION_KEY`:
+Fill `.env`:
+
+```sh
+TELEGRAM_BOT_TOKEN=
+GEMINI_API_KEY=
+ENCRYPTION_KEY=
+```
+
+Generate `ENCRYPTION_KEY` with:
 
 ```sh
 openssl rand -hex 32
 ```
 
-## Commands
+Then create/update the SQLite schema:
+
+```sh
+bun run db:push
+```
+
+Start the bot:
+
+```sh
+bun run bot
+```
+
+## Common Commands
 
 ```sh
 bun run typecheck
+bun test
 bun run build
 bun run db:push
 bun run bot
 ```
 
-## Current Slice
+Package-level commands also exist:
 
-Implemented:
+```sh
+bun --cwd packages/bot run typecheck
+bun --cwd packages/core run typecheck
+bun --cwd packages/core run db:push
+```
 
-- Monorepo scaffold and workspace scripts
-- Full Drizzle schema from the spec
-- Core config, nutrition, streak, goal, rate-limit, and Gemini validation helpers
-- Prompt files for food scanning and target analysis
-- Bootable grammY bot shell with command handlers and scheduler stub
-- Next.js placeholder dashboard
-- Docker and Compose files for VPS deployment
+## Telegram Commands
 
-Next build slice: full onboarding with manual targets and TDEE suggestion.
+- `/start` — set up or reopen Nerif
+- `/menu` — open the main menu
+- `/log meal | kcal | protein | carbs | fat` — log food manually
+- `/scan` — scan food from a photo
+- `/today` — show today's totals
+- `/week` — show recent daily results
+- `/history` — show today's meals
+- `/delete_last` — remove the latest meal logged today
+- `/burn activity | kcal | minutes` — log exercise burn
+- `/weight kg` — log today's weight
+- `/goals` — view goals
+- `/note text #tag` — save a note
+- `/settings` — open settings
+- `/cancel` — cancel the current flow
+
+## Data And Storage
+
+Default local paths:
+
+- Database: `./data/nerif.db`
+- Food scan images: `./data/images`
+
+Docker sets:
+
+```sh
+DB_PATH=/app/data/nerif.db
+```
+
+and mounts local `./data` to `/app/data`.
+
+Runtime data is intentionally ignored by git except `data/.gitkeep`.
+
+## Docker
+
+Build and run with Compose:
+
+```sh
+docker compose up --build -d
+```
+
+Stop:
+
+```sh
+docker compose down
+```
+
+Logs:
+
+```sh
+docker compose logs -f bot
+```
+
+## Testing
+
+Current test coverage includes core service tests and focused bot behavior tests:
+
+- Date/timezone helpers, including DST edge cases
+- Daily aggregation
+- Goal evaluation
+- Nutrition/TDEE helpers
+- Streak evaluation
+- Gemini prompt/path utilities
+- Scan rate limits
+- Reset/data cleanup behavior
+- Scan failure logging cleanup
+- Scheduler DND helper behavior
+
+Run all tests:
+
+```sh
+bun test
+```
+
+## Known Gaps
+
+- README and code assume polling via `bot.start`; webhook deployment is not configured.
+- Export, notification settings, LLM settings, and the web dashboard are not complete.
+- There are no generated Drizzle migration files yet; schema changes are applied with `db:push`.
+- Bot test coverage is focused on critical behavior, not every Telegram handler path.

@@ -160,6 +160,7 @@ export function registerScanHandlers(
           : null;
 
       await deps.db.insert(analysisLogs).values({
+        userId: user.id,
         modelName: deps.config.USER_LLM_MODEL ?? "gemini-2.5-flash",
         promptVersion: deps.config.PROMPT_VERSION,
         rawAiOutput: rawOutput ?? "",
@@ -216,6 +217,7 @@ export function registerScanHandlers(
         );
 
         await tx.insert(analysisLogs).values({
+          userId: user.id,
           mealId,
           modelName,
           promptVersion: deps.config.PROMPT_VERSION,

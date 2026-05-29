@@ -45,7 +45,9 @@ export function registerUserSchedules(input: {
         jobs.set(
           retryId,
           new Cron("0 8 * * *", { timezone: input.user.timezone }, async () => {
+            const job = jobs.get(retryId);
             jobs.delete(retryId);
+            job?.stop();
             await input.bot.api.sendMessage(
               input.user.telegramId,
               "⚖️ Morning check-in: log today's weight when you can.",

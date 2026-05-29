@@ -469,7 +469,6 @@ export function registerSettingsHandlers(
     await ctx.answerCallbackQuery();
     const user = ctx.userRecord;
     if (!user) return;
-    clearUserSchedules(user.id);
 
     // analysis_logs.mealId uses onDelete: "set null", so deleting meals
     // leaves orphaned AI logs. Delete those explicitly first, then
@@ -482,6 +481,7 @@ export function registerSettingsHandlers(
       for (const m of rows) {
         await tx.delete(analysisLogs).where(eq(analysisLogs.mealId, m.id));
       }
+      await tx.delete(analysisLogs).where(eq(analysisLogs.userId, user.id));
       await tx.delete(users).where(eq(users.id, user.id));
       return rows;
     });
@@ -497,6 +497,7 @@ export function registerSettingsHandlers(
     try { rmSync(`${deps.config.IMAGES_DIR}/${user.id}`, { recursive: true, force: true }); } catch {}
 
     ctx.userRecord = undefined;
+    clearUserSchedules(user.id);
     await ctx.reply("✅ All data deleted. Use /start to begin again.");
   });
 
