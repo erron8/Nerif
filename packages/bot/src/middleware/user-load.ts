@@ -8,7 +8,16 @@ import { users } from "@nerif/core";
 import type { NerifContext } from "../context";
 
 const PUBLIC_COMMANDS = new Set(["start", "cancel"]);
-const PUBLIC_CALLBACKS = new Set<string>();
+const PUBLIC_CALLBACKS = new Set([
+  // Onboarding: sex
+  "M", "F",
+  // Onboarding: activity level
+  "sedentary", "light", "moderate", "active", "very_active",
+  // Onboarding: timezone confirmation
+  "yes", "no",
+  // Onboarding: target mode
+  "formula", "manual", "skipped",
+]);
 
 export function userLoadMiddleware(
   db: NerifDb,

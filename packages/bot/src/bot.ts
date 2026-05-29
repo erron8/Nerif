@@ -6,7 +6,6 @@ import type { AppConfig, NerifDb } from "@nerif/core";
 
 import type { NerifContext, SessionData } from "./context";
 import { registerBurnHandlers } from "./handlers/burn";
-import { registerExportHandlers } from "./handlers/export";
 import { registerGoalHandlers } from "./handlers/goals";
 import { registerIntakeHandlers } from "./handlers/intake";
 import { registerMenuHandlers } from "./handlers/menu";
@@ -49,7 +48,6 @@ export function createBot(input: {
   registerGoalHandlers(bot);
   registerNoteHandlers(bot);
   registerSettingsHandlers(bot, input);
-  registerExportHandlers(bot);
 
   bot.catch((error) => {
     const ctx = error.ctx;

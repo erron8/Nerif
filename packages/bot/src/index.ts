@@ -22,7 +22,6 @@ try {
     { command: "weight", description: "⚖️ Log today's weight" },
     { command: "goals", description: "🎯 View goals" },
     { command: "note", description: "📝 Add a note" },
-    { command: "export", description: "⚙️ Export data" },
     { command: "settings", description: "⚙️ Open settings" },
     { command: "cancel", description: "← Cancel the current flow" },
   ]);
